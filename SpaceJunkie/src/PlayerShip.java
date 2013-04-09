@@ -22,6 +22,8 @@ public class PlayerShip {
 	public float directionalVelocity = 0.0f;
 	public float gimbleX;
 	public float gimbleY;
+	public float gimbleLimitX;
+	public float gimbleLimitY;
 	public float screenWidth;
 	public float screenHeight;
 	public float screenTop;
@@ -88,8 +90,12 @@ public class PlayerShip {
 		int i;
 		ConfigurableEmitterWrapper tmp;
 
-		if (in.isKeyPressed(Input.KEY_LEFT)) directionalVelocity += -0.01f * delta;
-		if (in.isKeyPressed(Input.KEY_RIGHT)) directionalVelocity += 0.01f * delta;
+		if (in.isKeyPressed(Input.KEY_LEFT)) {
+			directionalVelocity = (directionalVelocity > -0.1) ? directionalVelocity + -0.01f * delta : -0.1f;
+		}
+		if (in.isKeyPressed(Input.KEY_RIGHT)) {
+			directionalVelocity = (directionalVelocity < 0.1) ? directionalVelocity + 0.01f * delta : 0.1f;
+		}
 		if (in.isKeyPressed(Input.KEY_SPACE)) directionalVelocity = 0.0f;
 		if (shipFacing < 0) shipFacing += 360;
 		if (shipFacing > 360) shipFacing -=360;
@@ -110,24 +116,46 @@ public class PlayerShip {
 			}
 		}	
 		
-		if (in.isKeyPressed(Input.KEY_UP) && shipSpeed < 3) {
-			shipSpeed++;
-			for (i = 0; i < cew.size(); i++) {
-				((ConfigurableEmitter.SimpleValue)(cew.get(i).emitter.growthFactor)).setValue(-30 + 10 * shipSpeed);
+		if (in.isKeyPressed(Input.KEY_UP)) {
+			directionalVelocity = 0.0f;
+			if (shipSpeed < 3) {
+				shipSpeed++;
+				for (i = 0; i < cew.size(); i++) {
+					((ConfigurableEmitter.SimpleValue)(cew.get(i).emitter.growthFactor)).setValue(-258 + (86 * shipSpeed));
+				}
 			}
 		}
-		if (in.isKeyPressed(Input.KEY_DOWN) && shipSpeed > 0) {
-			shipSpeed--;
-			for (i = 0; i < cew.size(); i++) {
-				((ConfigurableEmitter.SimpleValue)(cew.get(i).emitter.growthFactor)).setValue(-30 + 10 * shipSpeed);
+		if (in.isKeyPressed(Input.KEY_DOWN)) {
+			directionalVelocity = 0.0f;
+			if (shipSpeed > 0) {
+				shipSpeed--;
+				for (i = 0; i < cew.size(); i++) {
+					((ConfigurableEmitter.SimpleValue)(cew.get(i).emitter.growthFactor)).setValue(-258 + (86 * shipSpeed));
+				}
 			}
 		}
 		if (shipSpeed > 0) {
 			velX += (Math.sin(Math.toRadians(shipFacing)) * shipSpeed * delta) / mass;
 			velY += (Math.cos(Math.toRadians(shipFacing)) * shipSpeed * delta) / mass;
 		}
+		gimbleLimitX = (float)Math.cos(Math.toRadians(shipFacing + 90.0)) * 70 * shipSpeed;
+		gimbleLimitY = (float)Math.sin(Math.toRadians(shipFacing + 90.0)) * 70 * shipSpeed;
+
+		gimbleX = valueMerge(gimbleLimitX, gimbleX);
+		gimbleY = valueMerge(gimbleLimitY, gimbleY);
+		
 		locX += velX;
 		locY += velY;
+	}
+	
+	private float valueMerge(float limit, float value) {
+		if (Math.abs(limit - value) < 0.1f) {
+			return limit;
+		} else if (limit > value) {
+			return value + 0.05f;
+		} else {
+			return value - 0.05f;
+		}
 	}
 
 	public void render() {
@@ -148,11 +176,7 @@ public class PlayerShip {
 		
 		void reposition(float dir, float midX, float midY) {
 			float sin, cos, rad;
-/*			if (dir > 315 && dir < 45) dir = 0;
-			if (dir > 45 && dir < 135) dir = 90;
-			if (dir > 135 && dir < 225) dir = 180;
-			if (dir > 225 && dir < 315) dir = 270;
-*/			rad = (float) Math.toRadians(dir);
+			rad = (float) Math.toRadians(dir);
 			sin = (float) Math.sin(rad);
 			cos = (float) Math.cos(rad);
 		    xPos = (xOffset * cos) - (yOffset * sin) + midX; // should = xOffset @ 0 & 180; = -y @ 90; = y @ 270

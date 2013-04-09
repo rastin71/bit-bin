@@ -3,6 +3,7 @@ import java.util.HashMap;
 
 import org.newdawn.slick.GameContainer;
 import org.newdawn.slick.Graphics;
+import org.newdawn.slick.Image;
 import org.newdawn.slick.MouseListener;
 import org.newdawn.slick.SlickException;
 import org.newdawn.slick.particles.ConfigurableEmitter;
@@ -21,11 +22,15 @@ public class GamePlayState extends BasicGameState implements MouseListener {
 	ConfigurableEmitter stars = null;
 	public GamePlayState(int state) {stateID = state;}
 	public int getID() {return stateID;}
+	ImageButton ibExit = null;
 	
 	public void init(GameContainer container, StateBasedGame arg1) throws SlickException {
 		int i;
 		container.getInput().enableKeyRepeat();
 		ConfigurableEmitter tmp = null;
+		
+		Image exitMapImage = new Image("res/Exit.png");
+		ibExit = new ImageButton(exitMapImage.getSubImage(0, 44, 63, 43), exitMapImage.getSubImage(0, 0, 63, 43), 900, 50);
 		primeEmitters = new HashMap<String, ConfigurableEmitter>();
 		try {
 			effectSystem = ParticleIO.loadConfiguredSystem("res/emitters.xml");
@@ -71,8 +76,11 @@ public class GamePlayState extends BasicGameState implements MouseListener {
 		g.drawString("Ship Velocity X: " + pShip.velX, 10, y += 20);
 		g.drawString("Ship Velocity Y: " + pShip.velY, 10, y += 20);
 		g.drawString("Ship Location X: " + pShip.locX, 10, y += 20);
-		g.drawString("Ship Location Y: " + pShip.locY, 10, y += 20);		g.drawString("Sin(" + pShip.shipFacing + "): " + Math.sin(Math.toRadians(pShip.shipFacing)), 10, y += 20);
+		g.drawString("Ship Location Y: " + pShip.locY, 10, y += 20);
+		g.drawString("Ship Rotational: " + pShip.directionalVelocity, 10, y += 20);
+		g.drawString("Sin(" + pShip.shipFacing + "): " + Math.sin(Math.toRadians(pShip.shipFacing)), 10, y += 20);
 		g.drawString("Cos(" + pShip.shipFacing + "): " + Math.cos(Math.toRadians(pShip.shipFacing)), 10, y += 20);
+		ibExit.draw();
 	}
 
 	public void update(GameContainer gc, StateBasedGame sbg, int delta)
@@ -81,7 +89,17 @@ public class GamePlayState extends BasicGameState implements MouseListener {
 		effectSystem.update(delta);
 		((ConfigurableEmitter.SimpleValue)(stars.gravityFactor)).setValue(pShip.velY * 10);
 		((ConfigurableEmitter.SimpleValue)(stars.windFactor)).setValue(-pShip.velX * 10);
-
+		if (ibExit.getClicked()) gc.exit();
 	}
 
+	public void mouseClicked(int button, int x, int y, int clickCount) {
+    	if (button == 0) {
+    		ibExit.checkBounds(x, y, true);
+		}
+	}
+	
+	public void mouseMoved(int oldx, int oldy, int newx, int newy) {
+		ibExit.checkBounds(newx, newy, false);
+	}
+	
 }
