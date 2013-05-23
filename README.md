@@ -5,7 +5,7 @@ Code and stuff
 
 What's what....
 
-All code currently under bit-bin is java code dealing with Slick2D. Either games or game/graphic related programs.
+Most code currently under bit-bin is java code dealing with Slick2D. Either games or game/graphic related programs.
 
 SystemOverload is the project that got me started with Slick2D, it was developed for Bryant York's
 CS313 class Fall of 2012. It is the most complete project there but since it was developed with tight time constraints
@@ -26,3 +26,5 @@ a good buffering algorithm for. When that is done I'll add an animated guy walki
 
 ParticleSystemGarden is meant to be a bunch of ParticleSystem eyecandy. Essentially a bunch of different emitters
 all doing stuff. Its pretty empty as a project so ignore that until you see recent (post 03/13) checkins. 
+
+Compound_Term_Access is a work-inprogress Drupal 6 module aimed at providing combinational requirments for content access.
