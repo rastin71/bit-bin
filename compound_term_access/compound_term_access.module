@@ -1,0 +1,193 @@
+<?php
+
+/** Include file with all Admin ui code.
+*
+*/
+require_once('compound_term_access.admin.inc');
+
+/** Implementation of hook_taxonomy().
+*
+*/
+function compound_term_access_taxonomy($op, $type, $array = NULL) {
+    $result = db_query("SELECT vid FROM {cta_vocabularies} WHERE vid = %d", $array['vid']);
+    if (db_fetch_array($result) && in_array($op, array('insert', 'delete'))) {
+        node_access_needs_rebuild(TRUE);
+    }
+}
+
+function _cta_permute($struct, $ids) {
+
+    $new_struct = array();
+    if ($struct == NULL) {
+        foreach($ids as $flag) {
+            $new_struct[] = $flag;
+        }
+    } else {
+        foreach($ids as $flag) {
+            foreach($struct as $mask) {
+                $new_struct[] = $flag | $mask;
+            }
+        }
+    }
+    return $new_struct;
+}
+
+/** Implementation of hook_node_access_records().
+*
+*/
+function compound_term_access_node_access_records($node) {
+
+    $node_tids = array_keys($node->taxonomy);
+    $mask_map = _cta_get_mask('tid');
+    foreach($mask_map as $vid => $tids) {
+        foreach($tids as $tid => $mask) {
+            if (!in_array($tid, $node_tids)) {
+                unset($mask_map[$vid][$tid]);
+            }
+        }
+    }
+
+    $struct = NULL;
+    foreach($mask_map as $vid => $tids) { 
+        $struct = _cta_permute($struct, $tids);
+    }
+/*
+    $taxonomy = array($node->nid => $node->taxonomy);
+    $struct = NULL;
+    foreach($taxonomy as $vocab => $terms) {
+        if (_cta_is_relevant_vocabulary($vocab)) {
+            $struct = _cta_permutation_merge($struct, $terms);
+        }
+    }
+*/
+    $grants = array();
+    foreach($struct as $code) {
+        $grants[] = array(
+            'realm' => 'cta_compound_key',
+            'gid' => $code,
+            'grant_view' => 1,
+            'grant_update' => 0,
+            'grant_delete' => 0,
+            'priority' => 0,
+        );
+    }
+
+    // Create override role for excepted users.
+    $result = db_query("SELECT rid, view, `update`, `delete` FROM {cta_exclude_roles}");
+    while($row = db_fetch_array($result)) {
+
+        $grants[] = array(
+            'realm' => 'cta_override',
+            'gid' => $row['rid'],
+            'grant_view' => $row['view'],
+            'grant_update' => $row['update'],
+            'grant_delete' => $row['delete'],
+            'priority' => 0,
+        );
+
+    }
+
+    return $grants;
+}
+
+/** Implementation of hook_node_grants().
+*
+*/
+function compound_term_access_node_grants($account, $op) {
+
+    $struct = _cta_create_role_struct($account->roles);
+
+    foreach($account->roles as $rid => $role) {
+
+    }
+}
+
+function _cta_get_term_mask_structure() {
+
+    $result = db_query("SELECT td.tid as value FROM {cta_vocabularies} v JOIN {term_data} td ON v.vid = td.vid JOIN {cta_term_roles} tr ON td.tid = tr.tid WHERE tr.rid <> 0 ORDER BY td.vid, td.tid");
+
+    $val = 1;
+    $map = array();
+    while($row = db_fetch_array($result)) {
+        $map[$row['value']] = $val;
+        $val = $val << 1;
+    }
+
+    return $map;
+}
+
+function _cta_get_mask($mode) {
+  
+    // Identical queries except for rid/tid. Identical sorting makes masking values consistent.
+    $rid_query = "SELECT td.vid, tr.rid as code FROM {cta_term_roles} tr JOIN {term_data} td ON tr.tid = td.tid WHERE tr.rid > 0 ORDER BY td.vid, tr.tid";
+    $tid_query = "SELECT td.vid, tr.tid as code FROM {cta_term_roles} tr JOIN {term_data} td ON tr.tid = td.tid WHERE tr.rid > 0 ORDER BY td.vid, tr.tid";
+
+    if ($mode == 'rid') {
+        $query = $rid_query;
+    } elseif ($mode == 'tid') {
+        $query = $tid_query;
+    } else {
+        return NULL;
+    }
+
+    $result = db_query($query);
+    $mask_value = 1;
+    while($row = db_fetch_array($result)) {
+        $mask_struct[$row['vid']][$row['code']] = $mask_value;
+        $mask_value = $mask_value << 1;
+    }
+    return $mask_struct;
+
+}
+
+function _cta_permutation_merge($struct, $chunk) {
+
+    static $map;
+    if (!isset($map)) {
+        $map = _cta_get_term_mask_structure();
+    }
+
+    // add the chunk to the struct.
+    if (is_array($struct)) {
+        $new_struct = array();        
+        foreach($struct as $key) {
+            foreach($chunk as $term) {
+                $new_struct[] = $key | $map[$term];
+            }
+        }
+        return $new_struct;
+    } else {
+        $struct = array();
+        foreach($chunk as $term) {
+            $struct[] = $map[$term];
+        }
+        return $struct;
+    }
+
+}
+
+function _cta_create_role_struct($roles) {
+ /* 
+    $result = db_query("SELECT td.vid, r.rid FROM {cta_term_roles} r JOIN {term_data} td ON r.tid = td.tid WHERE r.rid > 0");
+    $map = _cta_get_rid_mask_structure();
+    $struct = array();
+    foreach($roles as $rid => $role) {
+        if ($map[$rid] > 0) {
+            
+        }
+    }
+    return $roles;
+    */
+}
+
+function _cta_is_relevant_vocabulary($vid) {
+
+    $result = db_query("SELECT * FROM {cta_vocabularies} WHERE vid = %d", $vid);
+    $retVal = FALSE;
+    while($row = db_fetch_array($result)) {
+        $retVal = TRUE;
+    }
+    return $retVal;
+}
+
+?>

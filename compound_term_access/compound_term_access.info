@@ -1,0 +1,4 @@
+name = "Compound Term Access"
+description = "Node Access module based on taxonomy terms and compound requirements."
+version = 6.x-0.1
+core = 6.x
